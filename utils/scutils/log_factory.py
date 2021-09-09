@@ -13,17 +13,19 @@ from cloghandler import ConcurrentRotatingFileHandler
 
 class LogFactory(object):
     '''
-    Goal is to manage Simple LogObject instances
-    Like a Singleton
+    Goal is to manage Simple LogObject instance per configuration.
     '''
-    _instance = None
+    _instances = {}
 
     @classmethod
     def get_instance(self, **kwargs):
-        if self._instance is None:
-            self._instance = LogObject(**kwargs)
+        kwargs_tuple = tuple(sorted(kwargs.items()))
+        instance = self._instances.get(kwargs_tuple, None)
+        if instance is None:
+            instance = LogObject(**kwargs)
+            self._instances[kwargs_tuple] = instance
+        return instance
 
-        return self._instance
 
 class LogCallbackHandler:
 
