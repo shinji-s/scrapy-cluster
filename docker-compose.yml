@@ -29,6 +29,14 @@ services:
       - kafka
       - redis
       - zookeeper
+#    volumes:
+#      - /home/suzuki/src/scrapy-cluster/crawler:/usr/src/app
+    volumes:
+       - /home/suzuki/src/scrapy-cluster/twisted:/usr/local/lib/python3.6/site-packages/twisted
+       - /home/suzuki/src/scrapy-cluster/scrapy:/usr/local/lib/python3.6/site-packages/scrapy
+       - /home/suzuki/src/scrapy-cluster/crawler:/usr/src/app
+       - /home/suzuki/src/scrapy-cluster/docker/crawler/settings.py:/usr/src/app/crawling/localsettings.py
+       - /home/suzuki/src/scrapy-cluster/utils/scutils:/usr/local/lib/python3.6/site-packages/scutils
     restart: always
   rest:
     image: istresearch/scrapy-cluster:rest-ci-dev
