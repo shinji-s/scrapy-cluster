@@ -1,14 +1,17 @@
-from builtins import object
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+
+from builtins import object
 
 # Define your item pipelines here
-
-import ujson
-import datetime as dt
-import sys
-import traceback
 import base64
 from builtins import bytes, str
+import datetime as dt
+import io
+import sys
+import traceback
+import ujson
+
 
 from kafka import KafkaProducer
 from kafka.errors import KafkaTimeoutError
@@ -44,7 +47,8 @@ class LoggingBeforePipeline(object):
                                          dir=my_dir,
                                          file=my_file,
                                          bytes=my_bytes,
-                                         backups=my_backups)
+                                         backups=my_backups,
+                                         include_extra=True)
 
         return cls(logger)
 
@@ -105,7 +109,8 @@ class KafkaPipeline(object):
                                          dir=my_dir,
                                          file=my_file,
                                          bytes=my_bytes,
-                                         backups=my_backups)
+                                         backups=my_backups,
+                                         include_extra=True)
 
         try:
             producer = KafkaProducer(bootstrap_servers=settings['KAFKA_HOSTS'],
@@ -171,9 +176,18 @@ class KafkaPipeline(object):
         item['exception'] = exception if exception else traceback.format_exc()
         item['spiderid'] = spider.name
         item = self._clean_item(item)
-        self.logger.error("Failed to send page to Kafka", item)
+        self.logger.error("Failed to send page to Kafka: %s" % str(item))
+
 
     def process_item(self, item, spider):
+        try:
+            self._process_item(item, spider)
+        except:
+            traceback.print_exc(None, sys.stderr)
+            raise
+
+
+    def _process_item(self, item, spider):
         try:
             self.logger.debug("Processing item in KafkaPipeline")
             datum = dict(item)
@@ -195,8 +209,13 @@ class KafkaPipeline(object):
                     datum['body'] = datum['body'].decode(datum['encoding'])
 
                 message = ujson.dumps(datum, sort_keys=True)
+            except (KeyboardInterrupt, SystemExit):
+                raise
             except:
-                message = 'json failed to parse'
+                o = io.StringIO()
+                traceback.print_exc(None, o)
+                print (o.getvalue(), file=sys.stderr)
+                message = o.getvalue()
 
             firehose_topic = "{prefix}.crawled_firehose".format(prefix=prefix)
             future = self.producer.send(firehose_topic, message)
