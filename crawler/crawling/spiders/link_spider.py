@@ -8,6 +8,8 @@ from scrapy.conf import settings
 from crawling.items import RawResponseItem
 from crawling.spiders.redis_spider import RedisSpider
 
+import twisted.internet.defer
+twisted.internet.defer.setDebugging(True)
 
 class LinkSpider(RedisSpider):
     '''
@@ -76,4 +78,6 @@ class LinkSpider(RedisSpider):
                 yield req
 
         # raw response has been processed, yield to item pipeline
+        item['curdepth'] = response.meta.get('curdepth', -1)
+
         yield item
