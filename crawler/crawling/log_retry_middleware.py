@@ -3,8 +3,10 @@ from builtins import object
 import logging
 import redis
 import socket
-import time
 import sys
+import time
+import traceback
+
 from scrapy.utils.response import response_status_message
 
 from scrapy.xlib.tx import ResponseFailed
@@ -71,6 +73,7 @@ class LogRetryMiddleware(object):
                 self.redis_conn.info()
                 self.logger.debug("Connected to Redis in LogRetryMiddleware")
             except ConnectionError:
+                traceback.print_exc()
                 self.logger.error("Failed to connect to Redis in LogRetryMiddleware")
                 # plugin is essential to functionality
                 sys.exit(1)
