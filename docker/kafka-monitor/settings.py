@@ -61,3 +61,7 @@ STATS_TIMES = [
 # main thread sleep time
 SLEEP_TIME = 0.01
 HEARTBEAT_TIMEOUT = 120
+
+
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG')
+STATS_DUMP = 0

@@ -61,10 +61,11 @@ class LoggingBeforePipeline(object):
         if isinstance(item, RawResponseItem):
             # make duplicate item, but remove unneeded keys
             item_copy = dict(item)
-            del item_copy['body']
-            del item_copy['links']
-            del item_copy['response_headers']
-            del item_copy['request_headers']
+            for k in ['body','links','response_headers','request_headers',
+                      'attrs','response_url', 'status_msg', 'action',
+                      'spiderid'
+                      ]:
+                item_copy.pop(k, None)
             item_copy['logger'] = self.logger.name
             item_copy['action'] = 'emit'
             item_copy['spiderid'] = spider.name
@@ -165,7 +166,7 @@ class KafkaPipeline(object):
         item['success'] = True
         item = self._clean_item(item)
         item['spiderid'] = spider.name
-        self.logger.info("Sent page to Kafka", item)
+        self.logger.info("Sent page to Kafka.", extra=item)
 
 
     def _kafka_failure(self, item, spider, exception):
@@ -176,15 +177,22 @@ class KafkaPipeline(object):
         item['exception'] = exception if exception else traceback.format_exc()
         item['spiderid'] = spider.name
         item = self._clean_item(item)
-        self.logger.error("Failed to send page to Kafka: %s" % str(item))
+        self.logger.error("Failed to send page to Kafka.", extra=item)
 
 
     def process_item(self, item, spider):
         try:
-            self._process_item(item, spider)
+            return self._process_item(item, spider)
         except:
             traceback.print_exc(None, sys.stderr)
             raise
+
+    def convert_body_to_base64(datum, encoding):
+        # When running in Python 2 datum['body'] is a string
+        if isinstance(datum['body'], str):
+            datum['body'] = bytes(datum['body'], encoding)
+        # In Python 3 datum['body'] is already in byte form
+        datum['body'] = base64.b64encode(datum['body'])
 
 
     def _process_item(self, item, spider):
@@ -194,28 +202,22 @@ class KafkaPipeline(object):
             datum["timestamp"] = self._get_time()
             prefix = self.topic_prefix
 
-            try:
-                # Get the encoding. If it's not a key of datum, return utf-8
-                encoding = datum.get('encoding', 'utf-8')
+            # Get the encoding. If it's not a key of datum, return utf-8
+            encoding = datum.get('encoding', 'utf-8')
+            if self.use_base64:
+                self.convert_body_to_base64(datum, encoding)
+                self.logger.info('Setting is_base64: pass1')
+                datum['is_base64'] = True
+            else:
+                datum['is_base64'] = False
+                if 'utf-8' != encoding:
+                    try:
+                        datum['body'] = datum['body'].decode(encoding)
+                    except UnicodeDecodeError:
+                        self.convert_body_to_base64(datum, encoding)
+                        datum['is_base64'] = True
 
-                if self.use_base64:
-                    # When running in Python 2 datum['body'] is a string
-                    if isinstance(datum['body'], str):
-                        datum['body'] = bytes(datum['body'], encoding)
-                    # In Python 3 datum['body'] is already in byte form
-                    datum['body'] = base64.b64encode(datum['body'])
-
-                elif 'utf-8' != encoding:
-                    datum['body'] = datum['body'].decode(datum['encoding'])
-
-                message = ujson.dumps(datum, sort_keys=True)
-            except (KeyboardInterrupt, SystemExit):
-                raise
-            except:
-                o = io.StringIO()
-                traceback.print_exc(None, o)
-                print (o.getvalue(), file=sys.stderr)
-                message = o.getvalue()
+            message = ujson.dumps(datum, sort_keys=True)
 
             firehose_topic = "{prefix}.crawled_firehose".format(prefix=prefix)
             future = self.producer.send(firehose_topic, message)

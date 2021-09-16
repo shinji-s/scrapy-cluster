@@ -28,7 +28,8 @@ class MetaPassthroughMiddleware(object):
                                          dir=my_dir,
                                          file=my_file,
                                          bytes=my_bytes,
-                                         backups=my_backups)
+                                         backups=my_backups,
+                                         include_extra=True)
 
     @classmethod
     def from_crawler(cls, crawler):

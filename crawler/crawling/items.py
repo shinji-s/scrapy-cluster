@@ -21,3 +21,4 @@ class RawResponseItem(Item):
     exception = Field()
     encoding = Field()
     curdepth = Field()
+    referer = Field()

@@ -20,10 +20,17 @@ class LogFactory(object):
     @classmethod
     def get_instance(self, **kwargs):
         kwargs_tuple = tuple(sorted(kwargs.items()))
-        instance = self._instances.get(kwargs_tuple, None)
-        if instance is None:
+        logger_name = kwargs['name']
+        instance_and_kwargs = self._instances.get(logger_name, None)
+        if instance_and_kwargs:
+            instance, remembered_kwargs = instance_and_kwargs
+            if kwargs_tuple != remembered_kwargs:
+                raise ValueError('Conflicting kwargs: '
+                                 f'{kwargs_tuple} v.s. {remembered_kwargs}')
+        else:
             instance = LogObject(**kwargs)
-            self._instances[kwargs_tuple] = instance
+            print (f'***** Created New Instance from {kwargs_tuple} *****')
+            self._instances[logger_name] = (instance, kwargs_tuple)
         return instance
 
 

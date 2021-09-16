@@ -4,6 +4,7 @@ import scrapy
 from scrapy.http import Request
 from crawling.spiders.lxmlhtml import CustomLxmlLinkExtractor as LinkExtractor
 from scrapy.conf import settings
+from scrapy.utils.request import referer_str
 
 from crawling.items import RawResponseItem
 from crawling.spiders.redis_spider import RedisSpider
@@ -44,6 +45,7 @@ class LinkSpider(RedisSpider):
         item["body"] = response.body
         item["encoding"] = response.encoding
         item["links"] = []
+        item['referer'] = referer_str(response.request)
 
         # determine whether to continue spidering
         if cur_depth >= response.meta['maxdepth']:

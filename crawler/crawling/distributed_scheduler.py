@@ -359,7 +359,8 @@ class DistributedScheduler(object):
                                          dir=my_dir,
                                          file=my_file,
                                          bytes=my_bytes,
-                                         backups=my_backups)
+                                         backups=my_backups,
+                                         include_extra=True)
 
         global_page_per_domain_limit = settings.get('GLOBAL_PAGE_PER_DOMAIN_LIMIT', None)
         global_page_per_domain_limit_timeout = settings.get('GLOBAL_PAGE_PER_DOMAIN_LIMIT_TIMEOUT', 600)
